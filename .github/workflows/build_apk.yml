@@ -3,7 +3,12 @@ name: Build Android APK
 on:
   push:
     branches: [ "main", "master" ]
+    tags: 
+      - 'v*'  # Trigger on version tags, e.g. v1.0.0
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -33,8 +38,20 @@ jobs:
         # Build the APK using Flet's build command
         flet build apk mobile_app
       
+    - name: Rename APK (add version if tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        mv build/apk/app-release.apk build/apk/ServiceATS-Mobile-${{ github.ref_name }}.apk
+
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ServiceATS-Mobile-App
-        path: build/apk/
+        path: build/apk/*.apk
+
+    - name: Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: build/apk/*.apk
+        generate_release_notes: true
